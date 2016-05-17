@@ -64,18 +64,24 @@ app.post('/signup', function(req, res) {
 
 app.post('/login', function(req, res) {
   //check db for username and password
-
-  var existingUser = db.knex('users')
-  .where({
-    username: req.body.username,
-    password: req.body.password
-  })
-  .select('username');
-
-  res.header('location', '/');
-
-  console.log('db search for login', existingUser);
-  res.status(200).redirect('/');
+  var username = req.body.username;
+  var password = req.body.password;
+  db.knex('users')
+    .where({'username': username, 'password': password}) //also check password
+    .then(function(result) {
+      if (result[0] && result[0]['username'] === username && result[0]['password'] === password) {
+        res.header('location', '/');
+        res.status(200).redirect('/');
+      } else {
+        res.header('location', '/login');
+        res.sendStatus(401);
+      }
+    }).catch(function(err) {
+      throw {
+        type: 'DatabaseError',
+        message: 'Failed to create test setup data'
+      };
+    });
 });
 
 app.post('/links', 
