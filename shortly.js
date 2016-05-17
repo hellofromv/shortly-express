@@ -21,11 +21,18 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+app.use(session({ secret: 'keyboard cat', cookie: { maxAge: 60000}}));
 
+// Access the session as req.session
+var sess;
 
 app.get('/', 
 function(req, res) {
-  res.render('index');
+  if (sess === undefined) {
+    res.render('login');
+  } else {
+    res.render('index');
+  }
 });
 
 app.get('/login', 
@@ -51,13 +58,16 @@ function(req, res) {
 });
 
 app.post('/signup', function(req, res) {
-  var user = req.body.username;
+  var username = req.body.username;
   var password = req.body.password;
 
   Users.create({
-    username: user,
+    username: username,
     password: password
   }).then(function () {
+    sess = req.session;
+    sess.username = username;
+    res.header('location', '/');
     res.status(201).redirect('/');
   });
 });
@@ -70,11 +80,14 @@ app.post('/login', function(req, res) {
     .where({'username': username, 'password': password}) //also check password
     .then(function(result) {
       if (result[0] && result[0]['username'] === username && result[0]['password'] === password) {
+        sess = req.session;
+        sess.username = username;
+        // console.log('session valid for user', sess.username);
         res.header('location', '/');
         res.status(200).redirect('/');
       } else {
         res.header('location', '/login');
-        res.sendStatus(401);
+        res.status(401).redirect('/login');
       }
     }).catch(function(err) {
       throw {
