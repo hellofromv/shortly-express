@@ -2,7 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-
+var session = require('express-session');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -28,6 +28,16 @@ function(req, res) {
   res.render('index');
 });
 
+app.get('/login', 
+function(req, res) {
+  res.render('login');
+});
+
+app.get('/signup', 
+function(req, res) {
+  res.render('signup');
+});
+
 app.get('/create', 
 function(req, res) {
   res.render('index');
@@ -38,6 +48,34 @@ function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
+});
+
+app.post('/signup', function(req, res) {
+  var user = req.body.username;
+  var password = req.body.password;
+
+  Users.create({
+    username: user,
+    password: password
+  }).then(function () {
+    res.status(201).redirect('/');
+  });
+});
+
+app.post('/login', function(req, res) {
+  //check db for username and password
+
+  var existingUser = db.knex('users')
+  .where({
+    username: req.body.username,
+    password: req.body.password
+  })
+  .select('username');
+
+  res.header('location', '/');
+
+  console.log('db search for login', existingUser);
+  res.status(200).redirect('/');
 });
 
 app.post('/links', 
