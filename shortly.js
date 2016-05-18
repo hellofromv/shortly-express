@@ -3,6 +3,7 @@ var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var session = require('express-session');
+var bcrypt = require('bcrypt-nodejs');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -29,7 +30,7 @@ var sess;
 app.get('/', 
 function(req, res) {
   if (sess === undefined) {
-    res.render('login');
+    res.redirect('/login');
   } else {
     res.render('index');
   }
@@ -47,42 +48,67 @@ function(req, res) {
 
 app.get('/create', 
 function(req, res) {
-  res.render('index');
+  if (sess === undefined) {
+    res.redirect('/login');
+  } else {
+    res.render('index');
+  }
 });
 
 app.get('/links', 
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.status(200).send(links.models);
-  });
+  if (sess === undefined) {
+    res.redirect('/login');
+  } else {
+    Links.reset().fetch().then(function(links) {
+      res.status(200).send(links.models);
+    });
+  }
 });
 
 app.post('/signup', function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
+  var hash = bcrypt.hashSync(password);
+  console.log('hash upon creation is', hash);
 
-  Users.create({
-    username: username,
-    password: password
-  }).then(function () {
-    sess = req.session;
-    sess.username = username;
-    res.header('location', '/');
-    res.status(201).redirect('/');
-  });
+  db.knex('users')
+    .select('username')
+    .where({'username': username})
+    .then(function(result) {
+      console.log('******************', result);
+      if (result.length === 0) {
+        Users.create({
+          username: username,
+          password: hash
+        }).then(function () {
+          sess = req.session;
+          sess.username = username;
+          res.header('location', '/');
+          res.status(201).redirect('/');
+        });
+      } else {
+        res.status(401).redirect('/signup');
+      }
+    }).catch(function (err) {
+      throw err;
+    });
 });
 
 app.post('/login', function(req, res) {
   //check db for username and password
   var username = req.body.username;
   var password = req.body.password;
+  //hash lookup, hash = result[0]['password']
   db.knex('users')
-    .where({'username': username, 'password': password}) //also check password
+    .select('username', 'password')
+    .where({'username': username}) //also check password
     .then(function(result) {
-      if (result[0] && result[0]['username'] === username && result[0]['password'] === password) {
+      console.log('Result from lookup is', result);
+      if (result[0] && result[0]['username'] === username && bcrypt.compareSync(password, result[0]['password'])) {
+        console.log('hash upon lookup is', result[0]['password']);
         sess = req.session;
         sess.username = username;
-        // console.log('session valid for user', sess.username);
         res.header('location', '/');
         res.status(200).redirect('/');
       } else {
@@ -96,6 +122,14 @@ app.post('/login', function(req, res) {
       };
     });
 });
+
+
+
+// db.knex('users')
+//   .select('username', 'password')
+//   .then(function(result) {
+//     console.log('db users table:=================', result);
+//   });
 
 app.post('/links', 
 function(req, res) {
@@ -128,6 +162,12 @@ function(req, res) {
     }
   });
 });
+
+db.knex('urls')
+  .select('url', 'code')
+  .then(function(result) {
+    console.log('db links table:=================', result);
+  });
 
 /************************************************************/
 // Write your authentication routes here

@@ -63,7 +63,9 @@ describe('', function() {
 
     var requestWithSession = request.defaults({jar: true});
 
-    xbeforeEach(function(done) {
+
+    beforeEach
+    (function(done) {
       // create a user that we can then log-in with
       new User({
         'username': 'Phillip',
@@ -213,7 +215,8 @@ describe('', function() {
 
   }); // 'Link creation'
 
-  xdescribe('Privileged Access:', function() {
+
+  describe ('Privileged Access:', function() {
 
     it('Redirects to login page if a user tries to access the main page and is not signed in', function(done) {
       request('http://127.0.0.1:4568/', function(error, res, body) {
@@ -238,7 +241,8 @@ describe('', function() {
 
   }); // 'Priviledged Access'
 
-  xdescribe('Account Creation:', function() {
+
+  describe ('Account Creation:', function() {
 
     it('Signup creates a user record', function(done) {
       var options = {
@@ -286,7 +290,8 @@ describe('', function() {
 
   }); // 'Account Creation'
 
-  describe('Account Login:', function() {
+
+  describe ('Account Login:', function() {
 
     var requestWithSession = request.defaults({jar: true});
 
